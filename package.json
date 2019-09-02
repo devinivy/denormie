@@ -1,0 +1,57 @@
+{
+  "name": "denormie",
+  "version": "0.0.0",
+  "description": "a proper denormalizer, built on normalizr",
+  "main": "dist/denormie.js",
+  "module": "dist/denormie.module.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "npm run clean && rollup -c",
+    "clean": "rimraf dist",
+    "test": "lab -a @hapi/code -t 100 -L",
+    "lint": "lab -dL",
+    "coveralls": "lab -r lcov | coveralls"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devinivy/denormie.git"
+  },
+  "keywords": [
+    "normalizr",
+    "utility",
+    "orm",
+    "relationships",
+    "data",
+    "redux",
+    "denormalize",
+    "query"
+  ],
+  "author": "Devin Ivy <devin@bigroomstudios.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/devinivy/denormie/issues"
+  },
+  "homepage": "https://github.com/devinivy/denormie#readme",
+  "peerDependencies": {
+    "normalizr": "3.x.x"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@hapi/code": "6.x.x",
+    "@hapi/lab": "20.x.x",
+    "coveralls": "3.x.x",
+    "rollup": "1.x.x",
+    "rollup-plugin-babel": "4.x.x",
+    "rollup-plugin-commonjs": "10.x.x",
+    "rollup-plugin-filesize": "6.x.x",
+    "rollup-plugin-node-resolve": "5.x.x",
+    "rollup-plugin-peer-deps-external": "2.x.x",
+    "rollup-plugin-terser": "5.x.x",
+    "normalizr": "3.x.x",
+    "npm-run-all": "4.x.x",
+    "rimraf": "3.x.x"
+  }
+}
