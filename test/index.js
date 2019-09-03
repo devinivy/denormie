@@ -2,7 +2,7 @@
 
 const Code = require('@hapi/code');
 const Lab = require('@hapi/lab');
-const { schema: { Entity }, ...Normalizr } = require('normalizr');
+const { schema: { Entity, Array: ArraySchema }, ...Normalizr } = require('normalizr');
 const Denormie = require('../lib');
 
 const { describe, it } = exports.lab = Lab.script();
@@ -69,5 +69,84 @@ describe('Denormie', () => {
                 }
             }
         ]);
+    });
+
+    it('denormalizes shallow polymorphic array items.', () => {
+
+        const dog = new Entity('dogs');
+        const cat = new Entity('cats');
+        const person = new Entity('people');
+        cat.define({ owner: person });
+        dog.define({ owner: person });
+        person.define({ pets: new ArraySchema({ dog, cat }, ({ type }) => type) });
+
+        const pupper = { id: 11, type: 'dog', name: 'Pupper' };
+        const purrer = { id: 12, type: 'cat', name: 'Purrer' };
+        const devin = { id: 21, name: 'Devin', pets: [pupper, purrer] };
+        pupper.owner = devin;
+        purrer.owner = devin;
+
+        const { result, entities } = Normalizr.normalize(devin, person);
+
+        const denormalized = Denormie.denormalize(result, person, entities, [
+            ['pets']
+        ]);
+
+        expect(denormalized).to.equal({
+            id: 21,
+            name: 'Devin',
+            pets: [
+                { id: 11, type: 'dog', name: 'Pupper', owner: 21 },
+                { id: 12, type: 'cat', name: 'Purrer', owner: 21 }
+            ]
+        });
+    });
+
+    it('denormalizes deep polymorphic array items.', () => {
+
+        const dog = new Entity('dogs');
+        const cat = new Entity('cats');
+        const person = new Entity('people');
+        cat.define({ owner: person });
+        dog.define({ owner: person });
+        person.define({ pets: new ArraySchema({ dog, cat }, ({ type }) => type) });
+
+        const pupper = { id: 11, type: 'dog', name: 'Pupper' };
+        const purrer = { id: 12, type: 'cat', name: 'Purrer' };
+        const devin = { id: 21, name: 'Devin', pets: [pupper, purrer] };
+        pupper.owner = devin;
+        purrer.owner = devin;
+
+        const { result, entities } = Normalizr.normalize(devin, person);
+
+        const denormalized = Denormie.denormalize(result, person, entities, [
+            ['pets(cat)', 'owner']
+        ]);
+
+        expect(denormalized).to.equal({
+            id: 21,
+            name: 'Devin',
+            pets: [
+                {
+                    id: 11,
+                    type: 'dog',
+                    name: 'Pupper',
+                    owner: 21
+                },
+                {
+                    id: 12,
+                    type: 'cat',
+                    name: 'Purrer',
+                    owner: {
+                        id: 21,
+                        name: 'Devin',
+                        pets: [
+                            { id: 11, schema: 'dog' },
+                            { id: 12, schema: 'cat' }
+                        ]
+                    }
+                }
+            ]
+        });
     });
 });
