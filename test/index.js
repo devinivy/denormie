@@ -71,6 +71,39 @@ describe('Denormie', () => {
         ]);
     });
 
+    it('denormalizes relations unambiguously, sans circular dependencies.', () => {
+
+        const person = new Entity('people');
+        person.define({ self: person });
+
+        const devin = { id: 21, name: 'Devin', self: null };
+        devin.self = devin;
+
+        const { result, entities } = Normalizr.normalize(devin, person);
+
+        const denormalized = Denormie.denormalize(result, person, entities, [
+            ['self', 'self', 'self']
+        ]);
+
+        expect(denormalized).to.equal({
+            id: 21,
+            name: 'Devin',
+            self: {
+                id: 21,
+                name: 'Devin',
+                self: {
+                    id: 21,
+                    name: 'Devin',
+                    self: {
+                        id: 21,
+                        name: 'Devin',
+                        self: 21
+                    }
+                }
+            }
+        });
+    });
+
     it('denormalizes shallow polymorphic array items.', () => {
 
         const dog = new Entity('dogs');
