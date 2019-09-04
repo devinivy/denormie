@@ -182,4 +182,59 @@ describe('Denormie', () => {
             ]
         });
     });
+
+    it('denormalizes object schemas.', () => {
+
+        const person = new Entity('people');
+        const location = new Entity('locations');
+        person.define({ lastTrip: { from: location, to: location } });
+        location.define({ mayor: person });
+
+        const portland = { id: 11, city: 'Portland', state: 'ME' };
+        const boston = { id: 12, city: 'Boston', state: 'MA' };
+        const burlington = { id: 13, city: 'Burlington', state: 'VT' };
+        const devin = { id: 21, name: 'Devin', lastTrip: { from: portland, to: burlington } };
+        const harper = { id: 22, name: 'Harper', lastTrip: { from: boston, to: portland } };
+        portland.mayor = harper;
+        boston.mayor = devin;
+        burlington.mayor = harper;
+
+        const { result, entities } = Normalizr.normalize(devin, person);
+
+        const denormalized = Denormie.denormalize(result, person, entities, [
+            ['lastTrip', 'from'],
+            ['lastTrip', 'to', 'mayor', 'lastTrip', 'from']
+        ]);
+
+        expect(denormalized).to.equal({
+            id: 21,
+            name: 'Devin',
+            lastTrip: {
+                from: {
+                    id: 11,
+                    city: 'Portland',
+                    state: 'ME',
+                    mayor: 22
+                },
+                to: {
+                    id: 13,
+                    city: 'Burlington',
+                    state: 'VT',
+                    mayor: {
+                        id: 22,
+                        name: 'Harper',
+                        lastTrip: {
+                            from: {
+                                id: 12,
+                                city: 'Boston',
+                                state: 'MA',
+                                mayor: 21
+                            },
+                            to: 11
+                        }
+                    }
+                }
+            }
+        });
+    });
 });
