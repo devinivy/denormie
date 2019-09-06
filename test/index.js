@@ -2,7 +2,14 @@
 
 const Code = require('@hapi/code');
 const Lab = require('@hapi/lab');
-const { schema: { Entity, Array: ArraySchema }, ...Normalizr } = require('normalizr');
+const {
+    schema: {
+        Entity,
+        Union: UnionSchema,
+        Array: ArraySchema
+    },
+    ...Normalizr
+} = require('normalizr');
 const Denormie = require('../lib');
 
 const { describe, it } = exports.lab = Lab.script();
@@ -111,7 +118,7 @@ describe('Denormie', () => {
         const person = new Entity('people');
         cat.define({ owner: person });
         dog.define({ owner: person });
-        person.define({ pets: new ArraySchema({ dog, cat }, ({ type }) => type) });
+        person.define({ pets: new ArraySchema({ dog, cat }, 'type') });
 
         const pupper = { id: 11, type: 'dog', name: 'Pupper' };
         const purrer = { id: 12, type: 'cat', name: 'Purrer' };
@@ -142,7 +149,7 @@ describe('Denormie', () => {
         const person = new Entity('people');
         cat.define({ owner: person });
         dog.define({ owner: person });
-        person.define({ pets: new ArraySchema({ dog, cat }, ({ type }) => type) });
+        person.define({ pets: new ArraySchema({ dog, cat }, 'type') });
 
         const pupper = { id: 11, type: 'dog', name: 'Pupper' };
         const purrer = { id: 12, type: 'cat', name: 'Purrer' };
@@ -236,5 +243,119 @@ describe('Denormie', () => {
                 }
             }
         });
+    });
+
+    it('denormalizes shallow polymorphic union items.', () => {
+
+        const dog = new Entity('dogs');
+        const cat = new Entity('cats');
+        const animal = new UnionSchema({ dog, cat }, 'type');
+        const person = new Entity('people');
+        cat.define({ owner: person });
+        dog.define({ owner: person });
+        person.define({ pet: animal });
+
+        const pupper = { id: 11, type: 'dog', name: 'Pupper' };
+        const purrer = { id: 12, type: 'cat', name: 'Purrer' };
+        const devin = { id: 21, name: 'Devin', pet: pupper };
+        const harper = { id: 22, name: 'Harper', pet: purrer };
+        pupper.owner = devin;
+        purrer.owner = harper;
+
+        const { result, entities } = Normalizr.normalize([devin, harper], [person]);
+
+        const denormalized = Denormie.denormalize(result, [person], entities, [
+            ['pet']
+        ]);
+
+        expect(denormalized).to.equal([
+            {
+                id: 21,
+                name: 'Devin',
+                pet: {
+                    id: 11,
+                    type: 'dog',
+                    name: 'Pupper',
+                    owner: 21
+                }
+            },
+            {
+                id: 22,
+                name: 'Harper',
+                pet: {
+                    id: 12,
+                    type: 'cat',
+                    name: 'Purrer',
+                    owner: 22
+                }
+            }
+        ]);
+    });
+
+    it('denormalizes deep polymorphic union items.', () => {
+
+        const dog = new Entity('dogs');
+        const cat = new Entity('cats');
+        const animal = new UnionSchema({ dog, cat }, 'type');
+        const person = new Entity('people');
+        cat.define({ owner: person });
+        dog.define({ owner: person });
+        person.define({ partner: person, pet: animal });
+
+        const pupper = { id: 11, type: 'dog', name: 'Pupper' };
+        const purrer = { id: 12, type: 'cat', name: 'Purrer' };
+        const devin = { id: 21, name: 'Devin', pet: pupper };
+        const harper = { id: 22, name: 'Harper', pet: purrer };
+        pupper.owner = devin;
+        purrer.owner = harper;
+        devin.partner = harper;
+        harper.partner = devin;
+
+        const { result, entities } = Normalizr.normalize([devin, harper], [person]);
+
+        const denormalized = Denormie.denormalize(result, [person], entities, [
+            ['pet(cat)', 'owner'],
+            ['pet(dog)', 'owner', 'partner']
+        ]);
+
+        expect(denormalized).to.equal([
+            {
+                id: 21,
+                name: 'Devin',
+                partner: 22,
+                pet: {
+                    id: 11,
+                    type: 'dog',
+                    name: 'Pupper',
+                    owner: {
+                        id: 21,
+                        name: 'Devin',
+                        partner: {
+                            id: 22,
+                            name: 'Harper',
+                            partner: 21,
+                            pet: { id: 12, schema: 'cat' }
+                        },
+                        pet: { id: 11, schema: 'dog' }
+                    }
+                }
+            },
+            {
+                id: 22,
+                name: 'Harper',
+                partner: 21,
+                pet: {
+                    id: 12,
+                    type: 'cat',
+                    name: 'Purrer',
+                    owner: {
+                        id: 22,
+                        name: 'Harper',
+                        partner: 21,
+                        pet: { id: 12, schema: 'cat' }
+                    }
+                }
+            }
+        ]);
     });
 });
