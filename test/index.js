@@ -6,7 +6,8 @@ const {
     schema: {
         Entity,
         Union: UnionSchema,
-        Array: ArraySchema
+        Array: ArraySchema,
+        Values: ValuesSchema
     },
     ...Normalizr
 } = require('normalizr');
@@ -353,6 +354,208 @@ describe('Denormie', () => {
                         name: 'Harper',
                         partner: 21,
                         pet: { id: 12, schema: 'cat' }
+                    }
+                }
+            }
+        ]);
+    });
+
+    it('denormalizes shallow polymorphic values objects.', () => {
+
+        const country = new Entity('countries');
+        const state = new Entity('states', {}, { idAttribute: 'abbrev' });
+        const region = new Entity('regions', {}, { idAttribute: 'abbrev' });
+        country.define({ areasByAbbrev: new ValuesSchema({ state, region }, 'type') });
+        state.define({ country });
+        region.define({ country });
+
+        const countries = [
+            {
+                id: 1,
+                name: 'France',
+                areasByAbbrev: {
+                    ARA: {
+                        abbrev: 'ARA',
+                        type: 'region',
+                        name: 'Auvergne-Rhône-Alpes',
+                        country: 1
+                    },
+                    COR: {
+                        abbrev: 'COR',
+                        type: 'region',
+                        name: 'Corsica',
+                        country: 1
+                    }
+                }
+            },
+            {
+                id: 2,
+                name: 'United States',
+                areasByAbbrev: {
+                    ME: {
+                        abbrev: 'ME',
+                        type: 'state',
+                        name: 'Maine',
+                        country: 2
+                    },
+                    IL: {
+                        abbrev: 'IL',
+                        type: 'state',
+                        name: 'Illinois',
+                        country: 2
+                    }
+                }
+            }
+        ];
+
+        const { result, entities } = Normalizr.normalize(countries, [country]);
+
+        const denormalized = Denormie.denormalize(result, [country], entities, [
+            ['areasByAbbrev']
+        ]);
+
+        expect(denormalized).to.equal([
+            {
+                id: 1,
+                name: 'France',
+                areasByAbbrev: {
+                    ARA: {
+                        abbrev: 'ARA',
+                        type: 'region',
+                        name: 'Auvergne-Rhône-Alpes',
+                        country: 1
+                    },
+                    COR: {
+                        abbrev: 'COR',
+                        type: 'region',
+                        name: 'Corsica',
+                        country: 1
+                    }
+                }
+            },
+            {
+                id: 2,
+                name: 'United States',
+                areasByAbbrev: {
+                    ME: {
+                        abbrev: 'ME',
+                        type: 'state',
+                        name: 'Maine',
+                        country: 2
+                    },
+                    IL: {
+                        abbrev: 'IL',
+                        type: 'state',
+                        name: 'Illinois',
+                        country: 2
+                    }
+                }
+            }
+        ]);
+    });
+
+    it('denormalizes deep polymorphic values objects.', () => {
+
+        const country = new Entity('countries');
+        const state = new Entity('states', {}, { idAttribute: 'abbrev' });
+        const region = new Entity('regions', {}, { idAttribute: 'abbrev' });
+        country.define({ areasByAbbrev: new ValuesSchema({ state, region }, 'type') });
+        state.define({ country });
+        region.define({ country });
+
+        const countries = [
+            {
+                id: 1,
+                name: 'France',
+                areasByAbbrev: {
+                    ARA: {
+                        abbrev: 'ARA',
+                        type: 'region',
+                        name: 'Auvergne-Rhône-Alpes',
+                        country: 1
+                    },
+                    COR: {
+                        abbrev: 'COR',
+                        type: 'region',
+                        name: 'Corsica',
+                        country: 1
+                    }
+                }
+            },
+            {
+                id: 2,
+                name: 'United States',
+                areasByAbbrev: {
+                    ME: {
+                        abbrev: 'ME',
+                        type: 'state',
+                        name: 'Maine',
+                        country: 2
+                    },
+                    IL: {
+                        abbrev: 'IL',
+                        type: 'state',
+                        name: 'Illinois',
+                        country: 2
+                    }
+                }
+            }
+        ];
+
+        const { result, entities } = Normalizr.normalize(countries, [country]);
+
+        const denormalized = Denormie.denormalize(result, [country], entities, [
+            ['areasByAbbrev(state)', 'country']
+        ]);
+
+        expect(denormalized).to.equal([
+            {
+                id: 1,
+                name: 'France',
+                areasByAbbrev: {
+                    ARA: {
+                        abbrev: 'ARA',
+                        type: 'region',
+                        name: 'Auvergne-Rhône-Alpes',
+                        country: 1
+                    },
+                    COR: {
+                        abbrev: 'COR',
+                        type: 'region',
+                        name: 'Corsica',
+                        country: 1
+                    }
+                }
+            },
+            {
+                id: 2,
+                name: 'United States',
+                areasByAbbrev: {
+                    ME: {
+                        abbrev: 'ME',
+                        type: 'state',
+                        name: 'Maine',
+                        country: {
+                            id: 2,
+                            name: 'United States',
+                            areasByAbbrev: {
+                                ME: { id: 'ME', schema: 'state' },
+                                IL: { id: 'IL', schema: 'state' }
+                            }
+                        }
+                    },
+                    IL: {
+                        abbrev: 'IL',
+                        type: 'state',
+                        name: 'Illinois',
+                        country: {
+                            id: 2,
+                            name: 'United States',
+                            areasByAbbrev: {
+                                ME: { id: 'ME', schema: 'state' },
+                                IL: { id: 'IL', schema: 'state' }
+                            }
+                        }
                     }
                 }
             }
