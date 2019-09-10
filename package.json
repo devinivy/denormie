@@ -53,5 +53,8 @@
     "normalizr": "3.x.x",
     "npm-run-all": "4.x.x",
     "rimraf": "3.x.x"
+  },
+  "dependencies": {
+    "json-stable-stringify": "^1.0.1"
   }
 }
