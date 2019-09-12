@@ -561,4 +561,48 @@ describe('Denormie', () => {
             }
         ]);
     });
+
+    describe.only('createSelector()', () => {
+
+        it('selects plain schemas with memoization', () => {
+
+            // const dog = new Entity('dogs');
+            const person = new Entity('people');
+            person.define({ /* pet: dog, */ partner: person });
+            // dog.define({ owners: [person] });
+    
+            // const pony = { id: 11, dogName: 'Pony' };
+            const devin = { id: 21, name: 'Devin' /*, pet: pony */ };
+            const harper = { id: 22, name: 'Harper' /*, pet: pony */ };
+            // pony.owners = [devin, harper];
+            // devin.partner = harper;
+            harper.partner = devin;
+    
+            const { result, entities } = Normalizr.normalize(harper, person);
+
+            const selector = Denormie.createSelector(
+                ({ entities }) => entities,
+                ({ result }) => result,
+                person
+            );
+
+            const selectedHarper1 = selector({ entities, result });
+
+            expect(selectedHarper1.id).to.equal(22);
+            expect(selectedHarper1.partner.id).to.equal(21);
+
+            const selectedHarper2 = selector({ entities, result });
+
+            expect(selectedHarper2.id).to.equal(22);
+            expect(selectedHarper2).to.shallow.equal(selectedHarper1);
+            expect(selectedHarper2.partner).to.shallow.equal(selectedHarper1.partner);
+
+            // const selectedDevin = selector({ entities, result: 21 });
+
+            // expect(selectedDevin.id).to.equal(21);
+            // expect(selectedDevin).to.not.shallow.equal(selectedHarper1);
+            // expect(selectedDevin).to.shallow.equal(selectedHarper1.partner);
+            // expect(selectedDevin.partner).to.shallow.equal(selectedHarper1);
+        });
+    });
 });
